@@ -10,12 +10,24 @@ import sys
 import os
 import slacker
 import argparse
+import string
 from io import StringIO, BytesIO
 from IPython.core.magic import Magics, magics_class, line_magic, cell_magic
 
 class ArgumentParser(argparse.ArgumentParser):
     def error(self, message):
         raise ValueError(message)
+
+class SafeFormatDict(dict):
+    def __init__(self, main_dict, secondary_dict):
+        super(SafeFormatDict, self).__init__(main_dict)
+        self.secondary_dict = secondary_dict
+    def __missing__(self, key):
+        return self.secondary_dict.get(key, '{' + key + '}')
+
+class SafeFormatList(object):
+    def __getitem__(self, idx):
+        return '{%d}' % idx
 
 class Capture(object):
     def __init__(self, name):
@@ -83,17 +95,24 @@ class SlackMagics(Magics):
         out = stdout.data.getvalue()
         err = stderr.data.getvalue()
         exc = repr(result.error_in_exec) if result.error_in_exec else ''
-        msg = line.replace('\\n', '\n').format(out=out, err=err, exc=exc)
-        if msg == '': msg = ' '
-        self.slacker.chat.post_message(self.args.channel, msg, as_user=self.args.as_user)
+        self.slacker.chat.post_message(self.args.channel, self._format_message(line), as_user=self.args.as_user)
 
     @line_magic
     def slack_send(self, line):
         if not self.slacker or not self.args.channel: 
+            self._default_config()
+        if not self.slacker or not self.args.channel: 
             raise ValueError("Call %slack_setup -t <token> -c <#channel_or_@user> first or provide this information in .ipyslack.cfg.")
-        if line == '': line = ' '
-        self.slacker.chat.post_message(self.args.channel, line.replace('\\n', '\n'), as_user=self.args.as_user)
+        self.slacker.chat.post_message(self.args.channel, self._format_message(line), as_user=self.args.as_user)
 
+    def _format_message(self, msg, override_ns = dict()):
+        if msg == '': msg = ' '   # Slack does not like empty messages
+        msg = msg.replace('\\n', '\n')
+        try:
+            return string.Formatter().vformat(msg, SafeFormatList(), SafeFormatDict(override_ns, self.shell.user_ns))
+        except:
+            return msg  # May fail if one uses weird formatting stuff, e.g. {nonexistent_var.something}
+    
 def load_ipython_extension(ipython):
     magics = SlackMagics(ipython)
     ipython.register_magics(magics)

@@ -44,17 +44,17 @@ Usage
 
    at the top of any cell will send ``<message>`` to ``<target_channel>`` whenever cell execution is completed. 
 
-   The patterns ``{out}`` and ``{err}`` within ``<message>`` will be substituted with stdout or stderr from the cell's execution. The pattern ``{exc}`` denotes the exception (if any was thrown). The string ``\n`` denotes a new line. 
+   The patterns ``{out}`` and ``{err}`` within ``<message>`` will be substituted with stdout or stderr from the cell's execution. The pattern ``{exc}`` denotes the exception (if any was thrown). The string ``\n`` denotes a new line. Simiarly, any variable named ``x`` in your workspace can be referred to as ``{x}`` (in fact, you can use the standard format string notation).
 
    Example::
 
-     %%slack_notify *Completed!* :heavy_plus_sign:\nStdout: {out}\nStderr: {err}\nException: {exc}
+     %%slack_notify *Completed {len(results)} trials. Last result: {results[-1]}!* :heavy_plus_sign:\nStdout: {out}\nStderr: {err}\nException: {exc}
 
 4. In addition, the line-magic ``%slack_send <message>`` lets you send notifications about partial results. E.g.::
 
-      %%slack_notify All done. {exc}
+      %%slack_notify Completed. Final accuracy: {accuracy}. {exc}
       ... computation ...
-      %slack_send Half-way!
+      %slack_send Half-way! Current accuracy: {accuracy}
       ... computation ...
 
 See also
