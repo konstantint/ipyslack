@@ -95,7 +95,7 @@ class SlackMagics(Magics):
         out = stdout.data.getvalue()
         err = stderr.data.getvalue()
         exc = repr(result.error_in_exec) if result.error_in_exec else ''
-        self.slacker.chat.post_message(self.args.channel, self._format_message(line), as_user=self.args.as_user)
+        self.slacker.chat.post_message(self.args.channel, self._format_message(line, {'out': out, 'exc': exc, 'err': err}), as_user=self.args.as_user)
 
     @line_magic
     def slack_send(self, line):

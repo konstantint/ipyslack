@@ -9,7 +9,7 @@ License: MIT
 from setuptools import setup
 
 setup(name='ipyslack',
-      version='1.2',
+      version='1.2.1',
       description="IPython magic for sending slack notifications",
       long_description=open("README.rst").read(),
       classifiers=[  # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
