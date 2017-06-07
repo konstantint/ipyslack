@@ -7,6 +7,7 @@ License: MIT
 """
 
 import sys
+import os
 import slacker
 import argparse
 from io import StringIO, BytesIO
@@ -34,26 +35,49 @@ class Capture(object):
 
 @magics_class
 class SlackMagics(Magics):
+
     def __init__(self, shell):
         super(SlackMagics, self).__init__(shell)
-        self.args = None
         self.slacker = None
         p = ArgumentParser()
         p.add_argument('-c', '--channel', default=None)
-        p.add_argument('-u', '--as_user', action='store_true')
+        p.add_argument('-u', '--as_user', default=None)
         p.add_argument('-t', '--token', default=None)
+        p.add_argument('file', nargs='?', default=None)
         self.parser = p
-    
-    @line_magic
-    def slack_setup(self, line):
-        self.args = self.parser.parse_args(line.strip().split())
+        self._default_config()
+        
+    def _update_args(self, new_args):
+        self.args.channel = new_args.channel or self.args.channel
+        self.args.as_user = new_args.as_user or self.args.as_user
+        self.args.token = new_args.token or self.args.token
         if self.args.token:
             self.slacker = slacker.Slacker(self.args.token)
+    
+    def _read_config_file(self, filename, strict=False):
+        if strict and not os.path.exists(filename):
+            raise ValueError("File %s does not exist!" % filename)
+        line = '' if not os.path.exists(filename) else open(filename).readline().strip()
+        self._update_args(self.parser.parse_args(line.split()))
+    
+    def _default_config(self):
+        self.args = self.parser.parse_args([])
+        self._read_config_file(os.path.expanduser('~/.ipyslack.cfg'))
+        self._read_config_file('.ipyslack.cfg')
+        
+    @line_magic
+    def slack_setup(self, line):
+        args = self.parser.parse_args(line.strip().split())
+        if args.file is not None:
+            self._read_config_file(args.file, True)
+        self._update_args(args)
 
     @cell_magic
     def slack_notify(self, line, cell):
         if not self.slacker or not self.args.channel: 
-            raise ValueError("Call %slack_setup -t <token> -c <#channel_or_@user> first.")
+            self._default_config()
+        if not self.slacker or not self.args.channel: 
+            raise ValueError("Call %slack_setup -t <token> -c <#channel_or_@user> first or provide this information in .ipyslack.cfg.")
         with Capture('stdout') as stdout, Capture('stderr') as stderr:
             result = self.shell.run_cell(cell)
         out = stdout.data.getvalue()
@@ -63,11 +87,10 @@ class SlackMagics(Magics):
         if msg == '': msg = ' '
         self.slacker.chat.post_message(self.args.channel, msg, as_user=self.args.as_user)
 
-
     @line_magic
     def slack_send(self, line):
         if not self.slacker or not self.args.channel: 
-            raise ValueError("Call %slack_setup -t <token> -c <#channel_or_@user> first.")
+            raise ValueError("Call %slack_setup -t <token> -c <#channel_or_@user> first or provide this information in .ipyslack.cfg.")
         if line == '': line = ' '
         self.slacker.chat.post_message(self.args.channel, line.replace('\\n', '\n'), as_user=self.args.as_user)
 

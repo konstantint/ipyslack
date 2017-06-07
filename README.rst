@@ -21,8 +21,23 @@ Usage
    To obtain the API token visit `this page <https://api.slack.com/custom-integrations/legacy-tokens>`_.
    The ``<target_channel>`` parameter may either denote a channel (e.g. ``#general``) or a user (e.g. ``@me``).
     
-   Adding the option ``-u`` to ``%slack_setup`` will make yourself the sender of all messages. Otherwise (default) the messages originate from ``slackbot``.
+   Adding the option ``-u true`` to ``%slack_setup`` will make yourself the sender of all messages. Otherwise (default) the messages originate from ``slackbot``.
 
+   In order to avoid having to write the API token in every notebook, you can create a file containing the same configuration line::
+   
+     -t <api_token> -c <target_channel> -u false
+    
+   You can then load this configuration in the notebook by invoking::
+   
+     %slack_setup <filename>
+     
+   Even simpler, if you don't call ``%slack_setup`` at all, the extension will try to auto-configure itself on first use
+   by searching for the files ``~/.ipyslack.cfg`` and ``.ipyslack.cfg`` (in this order) and
+   trying to load configuration from these.
+   
+   Later files in this search order override the settings of the previous ones. That is, you can specify ``-t <api_token> -c #default_group`` 
+   in the global ``~/.ipyslack.cfg``, and only override ``-c #project_group`` in the local ``.ipyslack.cfg``.
+   
 3. Now adding::
 
     %%slack_notify <message>
